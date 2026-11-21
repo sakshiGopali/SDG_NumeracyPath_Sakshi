@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Numeracy Path</title><style>:root{font:16px/1.55 "Segoe UI",system-ui,sans-serif;--ink:#19293b;--muted:#54657b;--accent:#3755ad;--soft:#eaf0ff;--line:#d7e1ee;--surface:#f1f4fa;color:var(--ink);background:var(--surface)}
+*{box-sizing:border-box}body{margin:0}button,input{font:inherit}button{cursor:pointer}button:disabled{cursor:default;opacity:.64}a{color:var(--accent)}:focus-visible{outline:3px solid var(--accent);outline-offset:3px}
+main{max-width:1060px;margin:auto;padding:34px 24px}.hero{background:var(--accent);color:white;border-radius:18px;padding:26px 32px;margin-bottom:20px}.hero p{margin:0}.hero .goal{font-weight:700;font-size:.9rem}.hero h1{font-size:clamp(2rem,6vw,3.1rem);margin:2px 0;letter-spacing:-.055em;line-height:1.15}.hero .subtitle{margin-top:7px;color:#f4f8ff}
+.grid{display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:18px;align-items:start}.panel{background:#fff;border:1px solid var(--line);border-radius:14px;padding:20px}.panel h2{font-size:1.22rem;margin:0 0 8px;letter-spacing:-.02em}.panel h3{margin:0 0 5px;font-size:1rem}.panel p{margin:5px 0}.muted{color:var(--muted)}.small{font-size:.89rem}.group{border-top:1px solid var(--line);margin-top:15px;padding-top:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}button{border:1px solid transparent;border-radius:8px;padding:8px 12px;background:var(--accent);color:white;font-weight:650}.quiet,.choice{background:var(--soft);color:var(--accent);border-color:var(--line)}.choice{text-align:left}.option-list{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:13px 0}.tag{font-size:.83rem;color:var(--accent);font-weight:700}.question{font-weight:750;font-size:1.65rem;letter-spacing:-.035em}.result{background:var(--soft);border-radius:9px;padding:12px;margin:13px 0}.positive{color:#126345}.retry{color:#813208}.controls{margin-top:13px}
+.metric{margin:9px 0}.metric label{display:flex;justify-content:space-between;gap:8px;font-size:.9rem;font-weight:600}progress{accent-color:var(--accent);width:100%;height:10px;display:block;margin-top:3px}
+input[type=text]{border:1px solid #a7b4c5;border-radius:8px;padding:8px 10px;width:100%;min-width:0;background:white;color:var(--ink)}.entry{display:flex;gap:8px;margin-top:6px}.entry button{white-space:nowrap}.sample{font-size:.82rem;padding:5px 8px}.history{margin:8px 0 0;padding:0;list-style:none}.history li{border-top:1px solid var(--line);padding:7px 0;font-size:.86rem;overflow-wrap:anywhere}.history li b{display:block}.category{display:block;font-size:1.3rem;font-weight:740}.verdict{overflow-wrap:anywhere}
+@media(max-width:720px){main{padding:14px}.hero{padding:19px}.grid{grid-template-columns:1fr}.panel{padding:15px}}
+</style></head>
+<body>
+<main>
+ <header class="hero"><p class="goal">SDG 4 · Quality Education</p><h1>Numeracy Path</h1><p class="subtitle">Personalised practice in equivalent fractions, comparisons and addition.</p></header>
+ <div class="grid">
+  <section class="panel" aria-labelledby="practice">
+   <h2 id="practice">Fraction practice</h2>
+   <p class="tag" id="question-meta"></p><p class="question" id="question"></p>
+   <div class="option-list" id="options" role="group" aria-label="Answer choices"></div>
+   <div id="feedback" class="result" aria-live="polite">Choose an answer to get an explanation.</div>
+   <div class="row controls"><button id="next" disabled>Next question</button><button id="reset" class="quiet">Reset session</button></div>
+  </section>
+  <aside class="panel" aria-labelledby="progress">
+   <h2 id="progress">Learning dashboard</h2>
+   <p class="muted small">Estimated mastery by skill</p><div id="skills"></div>
+   <div class="group"><h3 id="next-label">Current focus</h3><p id="recommendation" aria-live="polite"></p><p class="muted small" id="count"></p></div>
+   <div class="group"><h3>How practice adapts</h3><p class="muted small">A Bayesian model updates each skill after your answer. The next question focuses on the skill with the lowest estimate.</p><p class="muted small">Session estimates start at 30%. They are practice signals and do not represent grades.</p></div>
+  </aside>
+ </div>
+</main>
+<script>
+"use strict";
+const skills = [
+  {name:"Equivalent fractions", questions:[
+    ["Equivalent to 1/2?",["2/3","2/4","1/4","3/4"],1,"Multiply the numerator and denominator of 1/2 by 2 to get 2/4."],
+    ["Equivalent to 2/3?",["3/4","2/6","6/9","4/9"],2,"Multiplying both parts of 2/3 by 3 gives 6/9."],
+    ["Simplify 8/12.",["1/2","3/4","4/5","2/3"],3,"Divide 8 and 12 by their common factor 4. The result is 2/3."],
+    ["Equivalent to 3/5?",["9/15","9/10","6/15","3/10"],0,"Multiply both parts of 3/5 by 3."]
+  ]},
+  {name:"Comparing fractions", questions:[
+    ["Which is greater, 1/4 or 3/4?",["1/4","3/4","They are equal","Cannot compare"],1,"Both fractions have fourths. Three fourths are greater than one fourth."],
+    ["Which is smaller, 2/3 or 3/5?",["2/3","They are equal","3/5","Cannot compare"],2,"Use fifteenths. 2/3 = 10/15 and 3/5 = 9/15, so 3/5 is smaller."],
+    ["Which is largest?",["2/5","1/5","1/2","3/5"],3,"In tenths, these are 4/10, 2/10, 5/10 and 6/10. The largest is 3/5."],
+    ["Which is greater, 5/6 or 7/9?",["5/6","7/9","They are equal","Cannot compare"],0,"5/6 = 15/18 and 7/9 = 14/18. The larger fraction is 5/6."]
+  ]},
+  {name:"Adding fractions", questions:[
+    ["What is 1/5 + 2/5?",["3/10","3/5","2/10","2/5"],1,"The denominator stays 5. Add the numerators 1 + 2 to get 3/5."],
+    ["What is 1/4 + 1/2?",["2/6","1/6","3/4","2/4"],2,"Rewrite 1/2 as 2/4, then add 1/4 + 2/4 = 3/4."],
+    ["What is 2/3 + 1/6?",["3/9","1/2","2/9","5/6"],3,"Convert 2/3 to 4/6. Then add 4/6 + 1/6."],
+    ["What is 3/8 + 1/4?",["5/8","4/12","4/8","1/2"],0,"Rewrite 1/4 as 2/8. Adding 3/8 and 2/8 gives 5/8."]
+  ]}
+];
+const get = id => document.getElementById(id);
+let mastery, attempts, answered, current;
+const parameters = {prior:0.30, guess:0.25, slip:0.12, learn:0.10};
+function update(p, correct) {
+  const evidenceIfKnown = correct ? 1 - parameters.slip : parameters.slip;
+  const evidenceIfUnknown = correct ? parameters.guess : 1 - parameters.guess;
+  const known = evidenceIfKnown * p;
+  const posterior = known / (known + evidenceIfUnknown * (1 - p));
+  return posterior + (1 - posterior) * parameters.learn;
+}
+function weakest() {
+  return mastery.reduce((best, estimate, index) => estimate < mastery[best] ? index : best, 0);
+}
+function dashboard() {
+  get("skills").replaceChildren(...skills.map((skill, index) => {
+    const item = document.createElement("div");
+    item.className = "metric";
+    const label = document.createElement("label");
+    label.htmlFor = "skill-" + index;
+    const percent = Math.round(mastery[index] * 100);
+    label.textContent = skill.name + " · " + percent + "%";
+    const meter = document.createElement("progress");
+    meter.id = label.htmlFor;
+    meter.max = 100;
+    meter.value = percent;
+    item.append(label, meter);
+    return item;
+  }));
+  get("next-label").textContent = answered ? "Recommended next skill" : "Current focus";
+  get("recommendation").textContent = skills[answered ? weakest() : current].name;
+  get("count").textContent = attempts.reduce((total, value) => total + value, 0) + " questions answered";
+}
+function render() {
+  answered = false;
+  current = weakest();
+  const skill = skills[current];
+  const [question, choices, key, explanation] = skill.questions[attempts[current] % skill.questions.length];
+  get("question-meta").textContent = skill.name + " · Question " + (attempts.reduce((a, b) => a + b, 0) + 1);
+  get("question").textContent = question;
+  get("feedback").textContent = "Choose an answer to get an explanation.";
+  get("next").disabled = true;
+  get("options").replaceChildren(...choices.map((choice, index) => {
+    const button = document.createElement("button");
+    button.className = "choice";
+    button.textContent = choice;
+    button.addEventListener("click", () => {
+      if (answered) return;
+      answered = true;
+      const correct = index === key;
+      mastery[current] = update(mastery[current], correct);
+      attempts[current] += 1;
+      const title = document.createElement("strong");
+      title.className = correct ? "positive" : "retry";
+      title.textContent = correct ? "Correct. " : "The answer is " + choices[key] + ". ";
+      get("feedback").replaceChildren(title, explanation);
+      get("next").disabled = false;
+      get("options").querySelectorAll("button").forEach(option => option.disabled = true);
+      dashboard();
+      get("next").focus();
+    });
+    return button;
+  }));
+  dashboard();
+}
+function reset() {
+  mastery = skills.map(() => parameters.prior);
+  attempts = skills.map(() => 0);
+  render();
+}
+get("next").addEventListener("click", () => {
+  render();
+  get("options").querySelector("button").focus();
+});
+get("reset").addEventListener("click", reset);
+reset();
+</script>
+</body></html>
